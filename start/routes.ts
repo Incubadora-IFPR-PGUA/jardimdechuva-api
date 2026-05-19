@@ -30,3 +30,16 @@ Route.post('/webhook/deploy/:token', async ({ params, response }) => {
 
   return response.send('Deploying...')
 })
+
+Route.group(() => {
+  Route.resource('usuarios', 'UsuarioController').apiOnly()
+  Route.resource('jardins', 'JardimController').apiOnly()
+  Route.resource('dispositivos', 'DispositivoController').apiOnly()
+  Route.resource('sensores', 'SensorController').apiOnly()
+  Route.resource('atuadores', 'AtuadorController').apiOnly()
+  Route.resource('automacoes', 'AutomacaoController').apiOnly()
+  Route.resource('alertas', 'AlertaController').apiOnly()
+  Route.resource('leituras', 'LeituraSensorController').apiOnly()
+  Route.resource('tipos-dispositivos', 'TipoDispositivoController').apiOnly()
+  Route.resource('tipos-sensores', 'TipoSensorController').apiOnly()
+}).prefix('/api/v1')
