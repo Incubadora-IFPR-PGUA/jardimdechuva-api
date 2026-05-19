@@ -32,12 +32,7 @@ const bodyParserConfig: BodyParserConfig = {
     encoding: 'utf-8',
     limit: '1mb',
     strict: true,
-    types: [
-      'application/json',
-      'application/json-patch+json',
-      'application/vnd.api+json',
-      'application/csp-report',
-    ],
+    types: ['application/json-patch+json', 'application/vnd.api+json', 'application/csp-report'],
   },
 
   /*
@@ -85,9 +80,7 @@ const bodyParserConfig: BodyParserConfig = {
     encoding: 'utf-8',
     limit: '1mb',
     queryString: {},
-    types: [
-      'text/*',
-    ],
+    types: ['text/plain'],
   },
 
   /*
