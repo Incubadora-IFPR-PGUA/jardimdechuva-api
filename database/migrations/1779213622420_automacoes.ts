@@ -1,16 +1,17 @@
 import BaseSchema from '@ioc:Adonis/Lucid/Schema'
 
-export default class Regras extends BaseSchema {
-  protected tableName = 'regras'
+export default class Automacoes extends BaseSchema {
+  protected tableName = 'automacoes'
 
   public async up() {
     this.schema.createTable(this.tableName, (table) => {
-      table.increments('id_regra')
+      table.increments('id_automacao')
       table.integer('id_sensor').unsigned().notNullable()
       table.string('condicao', 255).nullable()
       table.string('acao', 255).nullable()
       table.integer('prioridade').defaultTo(1)
       table.boolean('ativa').defaultTo(true)
+      table.timestamp('deleted_at', { useTz: true }).nullable()
       table.foreign('id_sensor').references('id_sensor').inTable('sensores').onDelete('CASCADE')
     })
   }

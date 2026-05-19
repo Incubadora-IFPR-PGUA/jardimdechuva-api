@@ -10,6 +10,7 @@ export default class Atuadores extends BaseSchema {
       table.string('nome', 150).nullable()
       table.string('mqtt_topico_comando', 255).notNullable()
       table.string('estado_atual', 50).nullable()
+      table.specificType('localizacao', 'POINT').nullable()
       table.timestamp('created_at', { useTz: true }).defaultTo(this.now())
       table.timestamp('updated_at', { useTz: true }).defaultTo(this.now())
       table.timestamp('deleted_at', { useTz: true }).nullable()
