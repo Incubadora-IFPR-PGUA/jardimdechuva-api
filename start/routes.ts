@@ -6,7 +6,7 @@ MqttService.connect()
 import Route from '@ioc:Adonis/Core/Route'
 
 Route.get('/', async () => {
-  return { hello: 'world' }
+  return { ola: 'mundo' }
 })
 
 Route.post('/webhook/deploy/:token', async ({ params, response }) => {
