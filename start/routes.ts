@@ -13,27 +13,24 @@ Route.post('/webhook/deploy', async ({ request, response }) => {
   const crypto = require('crypto')
   const secret = Env.get('WEBHOOK_SECRET', '')
   const signature = request.header('x-hub-signature-256') || ''
-  const payload = JSON.stringify(request.body())
+  const rawBody = JSON.stringify(request.body())
 
   const expected = 'sha256=' + crypto
     .createHmac('sha256', secret)
-    .update(payload)
+    .update(rawBody)
     .digest('hex')
 
   if (signature !== expected) {
+    console.log('[WEBHOOK] Assinatura inválida')
+    console.log('[WEBHOOK] Recebida:', signature)
+    console.log('[WEBHOOK] Esperada:', expected)
     return response.status(401).send('Unauthorized')
   }
 
-  const { execSync } = require('child_process')
+  const { exec } = require('child_process')
   const cwd = '/home/incubadoraifpr-apijardimdechuva/htdocs/apijardimdechuva.incubadoraifpr.com.br'
 
-  execSync(`
-    git pull &&
-    npm install &&
-    node ace build --production --ignore-ts-errors &&
-    cp .env build/.env &&
-    pm2 restart API-JARDIM-CHUVA
-  `, { cwd, shell: '/bin/bash' })
+  exec(`git pull && npm install && node ace build --production --ignore-ts-errors && cp .env build/.env && pm2 restart API-JARDIM-CHUVA`, { cwd, shell: '/bin/bash' })
 
-  return response.send('Deployed!')
+  return response.send('Deploying...')
 })
