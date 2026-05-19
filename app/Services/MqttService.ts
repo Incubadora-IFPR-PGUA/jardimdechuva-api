@@ -1,5 +1,8 @@
 import mqtt from 'mqtt'
 import Env from '@ioc:Adonis/Core/Env'
+import { DateTime } from 'luxon'
+import Sensor from 'App/Models/Sensor'
+import LeituraSensor from 'App/Models/LeituraSensor'
 
 class MqttService {
   private client: mqtt.MqttClient
@@ -13,9 +16,13 @@ class MqttService {
 
     this.client.on('connect', () => {
       console.log('[MQTT] Conectado ao broker')
-      this.client.subscribe('sensor/data', (err) => {
-        if (err) console.error('[MQTT] Erro ao subscrever:', err)
-        else console.log('[MQTT] Subscrito em sensor/data')
+
+      const topicos = ['sensor/data', 'sensor/water']
+      topicos.forEach((topico) => {
+        this.client.subscribe(topico, (err) => {
+          if (err) console.error(`[MQTT] Erro ao subscrever ${topico}:`, err)
+          else console.log(`[MQTT] Subscrito em ${topico}`)
+        })
       })
     })
 
@@ -23,7 +30,9 @@ class MqttService {
       try {
         const payload = JSON.parse(message.toString())
         console.log(`[MQTT] Tópico: ${topic}`, payload)
-        await this.handleSensorData(payload)
+
+        if (topic === 'sensor/data')  await this.handleSensorData(topic, payload)
+        if (topic === 'sensor/water') await this.handleSensorData(topic, payload)
       } catch (err) {
         console.error('[MQTT] Payload inválido:', err)
       }
@@ -34,13 +43,29 @@ class MqttService {
     })
   }
 
-  private async handleSensorData(payload: {
-    temperature: number
-    humidity: number
-    timestamp: number
-  }) {
-    console.log('[MQTT] Dados recebidos:', payload)
-    // Aqui vai salvar no banco depois
+  private async handleSensorData(topic: string, payload: Record<string, any>) {
+    try {
+      const sensor = await Sensor.findBy('mqtt_topico_leitura', topic)
+
+      if (!sensor) {
+        console.warn(`[MQTT] Sensor não cadastrado para o tópico: ${topic}`)
+        return
+      }
+
+      await LeituraSensor.create({
+        idSensor: sensor.idSensor,
+        valor: payload.temperature ?? payload.raw ?? null,
+        valorJson: payload,
+      })
+
+      sensor.valorAtual = payload.temperature ?? payload.raw ?? null
+      sensor.atualizadoEm = DateTime.now()
+      await sensor.save()
+
+      console.log(`[MQTT] Leitura salva — sensor ${sensor.idSensor}:`, payload)
+    } catch (err) {
+      console.error('[MQTT] Erro ao salvar leitura:', err)
+    }
   }
 }
 
