@@ -8,6 +8,9 @@
     "build"
   ],
   "compilerOptions": {
+    "useDefineForClassFields": false,
+    "ignoreDeprecations": "6.0",
+    "strictPropertyInitialization": false,
     "outDir": "build",
     "rootDir": "./",
     "baseUrl": "./",
