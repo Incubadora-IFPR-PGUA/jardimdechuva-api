@@ -1,0 +1,828 @@
+openapi: 3.0.3
+info:
+  title: Jardim de Chuva API
+  description: |
+    API REST do sistema **Jardim de Chuva Inteligente** (AdonisJS 5 + MySQL).
+
+    ### Leituras de sensores (HTTP)
+    - `POST /leituras/chuva` — sensor de chuva (`status`, `deltaV`)
+    - `POST /leituras/clima` — umidade e temperatura (`humidity`, `temperature`)
+
+    ### Leituras via MQTT (ESP32)
+    A API também consome o broker MQTT quando `MQTT_ENABLED=true`.
+    Não são rotas HTTP.
+
+    | Sensor | Tópico | JSON |
+    |--------|--------|------|
+    | Chuva | `sensor_esp` | `{ "status", "deltaV" }` |
+    | Umidade/temp | `sensor_clima` | `{ "humidity", "temperature" }` |
+
+    Checklist de integração: [INTEGRACAO-ESP32-MQTT.md](INTEGRACAO-ESP32-MQTT.md)
+
+    ### Autenticação
+    Endpoints públicos no momento (sem JWT). Planeje auth antes de produção aberta.
+  version: 1.0.0
+  contact:
+    name: Incubadora IFPR — Jardim de Chuva
+
+servers:
+  - url: http://localhost:3333
+    description: Desenvolvimento local
+  - url: https://apijardimdechuva.incubadoraifpr.com.br
+    description: Produção (VPS)
+
+tags:
+  - name: Sistema
+  - name: Usuários
+  - name: Jardins
+  - name: Dispositivos
+  - name: Sensores
+  - name: Leituras
+  - name: Atuadores
+  - name: Automações
+  - name: Alertas
+  - name: Tipos
+
+paths:
+  /:
+    get:
+      tags: [Sistema]
+      summary: Health check
+      responses:
+        '200':
+          description: API online
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  hello:
+                    type: string
+                    example: world
+
+  /api/v1/usuarios:
+    get:
+      tags: [Usuários]
+      summary: Listar usuários
+      responses:
+        '200':
+          description: Lista de usuários
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Usuario'
+    post:
+      tags: [Usuários]
+      summary: Criar usuário
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UsuarioCreate'
+      responses:
+        '201':
+          description: Criado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Usuario'
+
+  /api/v1/usuarios/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    get:
+      tags: [Usuários]
+      summary: Detalhar usuário
+      responses:
+        '200':
+          description: Usuário com cargos e jardins
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Usuario'
+    put:
+      tags: [Usuários]
+      summary: Atualizar usuário
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UsuarioUpdate'
+      responses:
+        '200':
+          description: Atualizado
+    delete:
+      tags: [Usuários]
+      summary: Excluir usuário (soft delete)
+      responses:
+        '204':
+          description: Sem conteúdo
+
+  /api/v1/jardins:
+    get:
+      tags: [Jardins]
+      summary: Listar jardins
+      responses:
+        '200':
+          description: OK
+    post:
+      tags: [Jardins]
+      summary: Criar jardim
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JardimCreate'
+      responses:
+        '201':
+          description: Criado
+
+  /api/v1/jardins/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    get:
+      tags: [Jardins]
+      summary: Detalhar jardim
+      responses:
+        '200':
+          description: OK
+    put:
+      tags: [Jardins]
+      summary: Atualizar jardim
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JardimUpdate'
+      responses:
+        '200':
+          description: OK
+    delete:
+      tags: [Jardins]
+      summary: Excluir jardim (soft delete)
+      responses:
+        '204':
+          description: Sem conteúdo
+
+  /api/v1/dispositivos:
+    get:
+      tags: [Dispositivos]
+      summary: Listar dispositivos
+      responses:
+        '200':
+          description: OK
+    post:
+      tags: [Dispositivos]
+      summary: Criar dispositivo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DispositivoCreate'
+      responses:
+        '201':
+          description: Criado
+
+  /api/v1/dispositivos/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    get:
+      tags: [Dispositivos]
+      summary: Detalhar dispositivo
+      responses:
+        '200':
+          description: OK
+    put:
+      tags: [Dispositivos]
+      summary: Atualizar dispositivo
+      responses:
+        '200':
+          description: OK
+    delete:
+      tags: [Dispositivos]
+      summary: Excluir dispositivo (soft delete)
+      responses:
+        '204':
+          description: Sem conteúdo
+
+  /api/v1/sensores:
+    get:
+      tags: [Sensores]
+      summary: Listar sensores
+      responses:
+        '200':
+          description: OK
+    post:
+      tags: [Sensores]
+      summary: Criar sensor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SensorCreate'
+      responses:
+        '201':
+          description: Criado
+
+  /api/v1/sensores/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    get:
+      tags: [Sensores]
+      summary: Detalhar sensor
+      responses:
+        '200':
+          description: OK
+    put:
+      tags: [Sensores]
+      summary: Atualizar sensor
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SensorUpdate'
+      responses:
+        '200':
+          description: OK
+    delete:
+      tags: [Sensores]
+      summary: Excluir sensor (soft delete)
+      responses:
+        '204':
+          description: Sem conteúdo
+
+  /api/v1/leituras:
+    get:
+      tags: [Leituras]
+      summary: Listar leituras
+      parameters:
+        - name: idSensor
+          in: query
+          schema:
+            type: integer
+          description: Filtrar por sensor
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+      responses:
+        '200':
+          description: Histórico ordenado por data (desc)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LeituraSensor'
+    post:
+      tags: [Leituras]
+      summary: Registrar leitura genérica
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LeituraCreate'
+      responses:
+        '201':
+          description: Leitura criada e sensor atualizado
+
+  /api/v1/leituras/chuva:
+    post:
+      tags: [Leituras]
+      summary: Registrar leitura — sensor de chuva
+      description: |
+        Atualiza `valor_atual` e `estado_atual` do sensor.
+        Equivalente HTTP ao payload MQTT `{ status, deltaV }`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LeituraChuvaCreate'
+      responses:
+        '201':
+          description: Leitura registrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeituraChuvaResponse'
+
+  /api/v1/leituras/clima:
+    post:
+      tags: [Leituras]
+      summary: Registrar leitura — umidade e temperatura
+      description: |
+        Grava temperatura em `valor` e ambos em `valor_json`.
+        Equivalente HTTP ao payload MQTT `{ humidity, temperature }`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LeituraClimaCreate'
+      responses:
+        '201':
+          description: Leitura registrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeituraClimaResponse'
+
+  /api/v1/leituras/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    get:
+      tags: [Leituras]
+      summary: Detalhar leitura
+      responses:
+        '200':
+          description: OK
+    put:
+      tags: [Leituras]
+      summary: Atualizar leitura
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                valor:
+                  type: number
+                valorJson:
+                  type: object
+      responses:
+        '200':
+          description: OK
+    delete:
+      tags: [Leituras]
+      summary: Excluir leitura
+      responses:
+        '204':
+          description: Sem conteúdo
+
+  /api/v1/atuadores:
+    get:
+      tags: [Atuadores]
+      summary: Listar atuadores
+      responses:
+        '200':
+          description: OK
+    post:
+      tags: [Atuadores]
+      summary: Criar atuador
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AtuadorCreate'
+      responses:
+        '201':
+          description: Criado
+
+  /api/v1/atuadores/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    get:
+      tags: [Atuadores]
+      summary: Detalhar atuador
+      responses:
+        '200':
+          description: OK
+    put:
+      tags: [Atuadores]
+      summary: Atualizar atuador
+      responses:
+        '200':
+          description: OK
+    delete:
+      tags: [Atuadores]
+      summary: Excluir atuador (soft delete)
+      responses:
+        '204':
+          description: Sem conteúdo
+
+  /api/v1/automacoes:
+    get:
+      tags: [Automações]
+      summary: Listar automações
+      responses:
+        '200':
+          description: OK
+    post:
+      tags: [Automações]
+      summary: Criar automação
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AutomacaoCreate'
+      responses:
+        '201':
+          description: Criado
+
+  /api/v1/automacoes/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    get:
+      tags: [Automações]
+      summary: Detalhar automação
+      responses:
+        '200':
+          description: OK
+    put:
+      tags: [Automações]
+      summary: Atualizar automação
+      responses:
+        '200':
+          description: OK
+    delete:
+      tags: [Automações]
+      summary: Excluir automação (soft delete)
+      responses:
+        '204':
+          description: Sem conteúdo
+
+  /api/v1/alertas:
+    get:
+      tags: [Alertas]
+      summary: Listar alertas
+      responses:
+        '200':
+          description: OK
+    post:
+      tags: [Alertas]
+      summary: Criar alerta
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AlertaCreate'
+      responses:
+        '201':
+          description: Criado
+
+  /api/v1/alertas/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    get:
+      tags: [Alertas]
+      summary: Detalhar alerta
+      responses:
+        '200':
+          description: OK
+    put:
+      tags: [Alertas]
+      summary: Atualizar alerta
+      responses:
+        '200':
+          description: OK
+    delete:
+      tags: [Alertas]
+      summary: Excluir alerta
+      responses:
+        '204':
+          description: Sem conteúdo
+
+  /api/v1/tipos-dispositivos:
+    get:
+      tags: [Tipos]
+      summary: Listar tipos de dispositivo
+      responses:
+        '200':
+          description: OK
+    post:
+      tags: [Tipos]
+      summary: Criar tipo de dispositivo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [nome]
+              properties:
+                nome:
+                  type: string
+      responses:
+        '201':
+          description: Criado
+
+  /api/v1/tipos-dispositivos/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    get:
+      tags: [Tipos]
+      summary: Detalhar tipo
+      responses:
+        '200':
+          description: OK
+    put:
+      tags: [Tipos]
+      summary: Atualizar tipo
+      responses:
+        '200':
+          description: OK
+    delete:
+      tags: [Tipos]
+      summary: Excluir tipo
+      responses:
+        '204':
+          description: Sem conteúdo
+
+  /api/v1/tipos-sensores:
+    get:
+      tags: [Tipos]
+      summary: Listar tipos de sensor
+      responses:
+        '200':
+          description: OK
+    post:
+      tags: [Tipos]
+      summary: Criar tipo de sensor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [nome]
+              properties:
+                nome:
+                  type: string
+                unidade:
+                  type: string
+                descricao:
+                  type: string
+      responses:
+        '201':
+          description: Criado
+
+  /api/v1/tipos-sensores/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    get:
+      tags: [Tipos]
+      summary: Detalhar tipo
+      responses:
+        '200':
+          description: OK
+    put:
+      tags: [Tipos]
+      summary: Atualizar tipo
+      responses:
+        '200':
+          description: OK
+    delete:
+      tags: [Tipos]
+      summary: Excluir tipo
+      responses:
+        '204':
+          description: Sem conteúdo
+
+components:
+  parameters:
+    IdPath:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+
+  schemas:
+    Usuario:
+      type: object
+      properties:
+        idUsuario:
+          type: integer
+        nome:
+          type: string
+        email:
+          type: string
+        ativo:
+          type: boolean
+    UsuarioCreate:
+      type: object
+      required: [nome, email, senha]
+      properties:
+        nome:
+          type: string
+        email:
+          type: string
+        senha:
+          type: string
+        ativo:
+          type: boolean
+          default: true
+    UsuarioUpdate:
+      type: object
+      properties:
+        nome:
+          type: string
+        email:
+          type: string
+        ativo:
+          type: boolean
+
+    JardimCreate:
+      type: object
+      required: [idUsuario, nome]
+      properties:
+        idUsuario:
+          type: integer
+        nome:
+          type: string
+        descricao:
+          type: string
+        localizacao:
+          type: object
+    JardimUpdate:
+      type: object
+      properties:
+        nome:
+          type: string
+        descricao:
+          type: string
+        localizacao:
+          type: object
+
+    DispositivoCreate:
+      type: object
+      required: [idJardim, idTipoDispositivo, identificador, protocolo, status, mqttTopicoBase]
+      properties:
+        idJardim:
+          type: integer
+        idTipoDispositivo:
+          type: integer
+        nome:
+          type: string
+        identificador:
+          type: string
+        protocolo:
+          type: string
+        status:
+          type: string
+        firmwareVersao:
+          type: string
+        mqttTopicoBase:
+          type: string
+
+    SensorCreate:
+      type: object
+      required: [idDispositivo, idTipoSensor, mqttTopicoLeitura]
+      properties:
+        idDispositivo:
+          type: integer
+        idTipoSensor:
+          type: integer
+        nome:
+          type: string
+        mqttTopicoLeitura:
+          type: string
+          description: Deve coincidir com o tópico MQTT do ESP32 (ex. sensor_esp, sensor_clima)
+        imagemUrl:
+          type: string
+        localizacao:
+          type: object
+    SensorUpdate:
+      type: object
+      properties:
+        nome:
+          type: string
+        estadoAtual:
+          type: string
+        valorAtual:
+          type: number
+        imagemUrl:
+          type: string
+        localizacao:
+          type: object
+
+    LeituraSensor:
+      type: object
+      properties:
+        idLeitura:
+          type: integer
+        idSensor:
+          type: integer
+        valor:
+          type: number
+          nullable: true
+        valorJson:
+          type: object
+        dataHora:
+          type: string
+          format: date-time
+    LeituraCreate:
+      type: object
+      required: [idSensor]
+      properties:
+        idSensor:
+          type: integer
+        valor:
+          type: number
+        valorJson:
+          type: object
+    LeituraChuvaCreate:
+      type: object
+      required: [idSensor]
+      properties:
+        idSensor:
+          type: integer
+        valor:
+          type: number
+        mm:
+          type: number
+        raw:
+          type: number
+        chovendo:
+          type: boolean
+      example:
+        idSensor: 1
+        status: chuva
+        deltaV: 0.42
+        chovendo: true
+        mm: 0.42
+    LeituraChuvaResponse:
+      type: object
+      properties:
+        mensagem:
+          type: string
+        leitura:
+          $ref: '#/components/schemas/LeituraSensor'
+    LeituraClimaCreate:
+      type: object
+      required: [idSensor, humidity, temperature]
+      properties:
+        idSensor:
+          type: integer
+        humidity:
+          type: number
+          description: Umidade relativa (%)
+        temperature:
+          type: number
+          description: Temperatura (°C)
+      example:
+        idSensor: 2
+        humidity: 68.5
+        temperature: 24.3
+    LeituraClimaResponse:
+      type: object
+      properties:
+        mensagem:
+          type: string
+        leitura:
+          $ref: '#/components/schemas/LeituraSensor'
+
+    AtuadorCreate:
+      type: object
+      required: [idDispositivo, mqttTopicoComando]
+      properties:
+        idDispositivo:
+          type: integer
+        nome:
+          type: string
+        mqttTopicoComando:
+          type: string
+        estadoAtual:
+          type: string
+        localizacao:
+          type: object
+
+    AutomacaoCreate:
+      type: object
+      required: [idSensor]
+      properties:
+        idSensor:
+          type: integer
+        condicao:
+          type: string
+        acao:
+          type: string
+        prioridade:
+          type: integer
+          default: 1
+        ativa:
+          type: boolean
+          default: true
+
+    AlertaCreate:
+      type: object
+      required: [idSensor]
+      properties:
+        idSensor:
+          type: integer
+        mensagem:
+          type: string
+        nivel:
+          type: string

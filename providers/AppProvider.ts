@@ -13,7 +13,12 @@ export default class AppProvider {
   }
 
   public async ready () {
-    // App is ready
+    if (this.app.environment !== 'web') {
+      return
+    }
+
+    const { default: printStartupBanner } = await import('App/Utils/StartupBanner')
+    await printStartupBanner()
   }
 
   public async shutdown () {
