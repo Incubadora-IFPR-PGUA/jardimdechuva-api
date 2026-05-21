@@ -16,7 +16,8 @@
   "preloads": [
     "./start/routes",
     "./start/kernel",
-    "./start/hooks"
+    "./start/hooks",
+    "./start/mqtt"
   ],
   "providers": [
     "./providers/AppProvider",
