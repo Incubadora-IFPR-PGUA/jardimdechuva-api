@@ -295,6 +295,65 @@ paths:
           description: Leitura criada e sensor atualizado
 
   /api/v1/leituras/chuva:
+    get:
+      tags: [Leituras]
+      summary: Listar leituras formatadas — sensor de chuva
+      description: Retorna o histórico formatado de leituras dos sensores de chuva para visualização em gráficos.
+      parameters:
+        - name: idSensor
+          in: query
+          schema:
+            type: integer
+          description: Filtrar por sensor específico
+        - name: dataInicio
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Data/hora inicial no formato ISO-8601
+        - name: dataFim
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Data/hora final no formato ISO-8601
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+          description: Limite de registros
+      responses:
+        '200':
+          description: Histórico de chuva formatado
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    idLeitura:
+                      type: integer
+                    idSensor:
+                      type: integer
+                    sensorNome:
+                      type: string
+                      nullable: true
+                    valor:
+                      type: number
+                      nullable: true
+                    deltaV:
+                      type: number
+                      nullable: true
+                    status:
+                      type: string
+                      nullable: true
+                    chovendo:
+                      type: boolean
+                    dataHora:
+                      type: string
+                      format: date-time
     post:
       tags: [Leituras]
       summary: Registrar leitura — sensor de chuva
@@ -316,6 +375,60 @@ paths:
                 $ref: '#/components/schemas/LeituraChuvaResponse'
 
   /api/v1/leituras/clima:
+    get:
+      tags: [Leituras]
+      summary: Listar leituras formatadas — umidade e temperatura
+      description: Retorna o histórico formatado de leituras de temperatura e umidade para visualização em gráficos.
+      parameters:
+        - name: idSensor
+          in: query
+          schema:
+            type: integer
+          description: Filtrar por sensor específico
+        - name: dataInicio
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Data/hora inicial no formato ISO-8601
+        - name: dataFim
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Data/hora final no formato ISO-8601
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+          description: Limite de registros
+      responses:
+        '200':
+          description: Histórico de clima formatado
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    idLeitura:
+                      type: integer
+                    idSensor:
+                      type: integer
+                    sensorNome:
+                      type: string
+                      nullable: true
+                    temperature:
+                      type: number
+                      nullable: true
+                    humidity:
+                      type: number
+                      nullable: true
+                    dataHora:
+                      type: string
+                      format: date-time
     post:
       tags: [Leituras]
       summary: Registrar leitura — umidade e temperatura

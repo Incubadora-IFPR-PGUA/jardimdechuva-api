@@ -76,7 +76,9 @@ Documentação interativa: **http://localhost:3333/docs** (Swagger UI)
 | GET | `/leituras` | Query: `idSensor?`, `limit?` (padrão 100) |
 | POST | `/leituras` | `idSensor`, `valor?`, `valorJson?` |
 | POST | `/leituras/chuva` | Ver abaixo |
+| GET | `/leituras/chuva` | Query: `idSensor?`, `dataInicio?`, `dataFim?`, `limit?` (Ver abaixo) |
 | POST | `/leituras/clima` | Ver abaixo |
+| GET | `/leituras/clima` | Query: `idSensor?`, `dataInicio?`, `dataFim?`, `limit?` (Ver abaixo) |
 | GET | `/leituras/:id` | — |
 | PUT | `/leituras/:id` | `valor?`, `valorJson?` |
 | DELETE | `/leituras/:id` | — |
@@ -93,6 +95,32 @@ Documentação interativa: **http://localhost:3333/docs** (Swagger UI)
 
 Alternativas: `valor`, `raw`, `chovendo` (boolean).
 
+### GET `/leituras/chuva`
+
+Retorna o histórico formatado de chuva (campo `deltaV`, `chovendo`, etc.), ideal para gráficos de precipitação.
+
+**Parâmetros de Query:**
+- `idSensor` (opcional): Filtra por sensor específico.
+- `dataInicio` (opcional): Data/hora inicial (formato ISO, ex: `2026-05-22T00:00:00Z`).
+- `dataFim` (opcional): Data/hora final (formato ISO, ex: `2026-05-22T23:59:59Z`).
+- `limit` (opcional, padrão 100): Limite de registros.
+
+**Resposta Exemplo (JSON):**
+```json
+[
+  {
+    "idLeitura": 12,
+    "idSensor": 1,
+    "sensorNome": "Sensor de chuva principal",
+    "valor": 1.2,
+    "deltaV": 0.42,
+    "status": "chuva",
+    "chovendo": true,
+    "dataHora": "2026-05-22T15:00:00.000Z"
+  }
+]
+```
+
 ### POST `/leituras/clima`
 
 ```json
@@ -101,6 +129,30 @@ Alternativas: `valor`, `raw`, `chovendo` (boolean).
   "humidity": 68.5,
   "temperature": 24.3
 }
+```
+
+### GET `/leituras/clima`
+
+Retorna o histórico formatado de clima (temperatura e umidade separadas), ideal para gráficos de temperatura/umidade.
+
+**Parâmetros de Query:**
+- `idSensor` (opcional): Filtra por sensor específico.
+- `dataInicio` (opcional): Data/hora inicial (formato ISO, ex: `2026-05-22T00:00:00Z`).
+- `dataFim` (opcional): Data/hora final (formato ISO, ex: `2026-05-22T23:59:59Z`).
+- `limit` (opcional, padrão 100): Limite de registros.
+
+**Resposta Exemplo (JSON):**
+```json
+[
+  {
+    "idLeitura": 13,
+    "idSensor": 2,
+    "sensorNome": "DHT22 - Clima Externo",
+    "temperature": 23.5,
+    "humidity": 68.0,
+    "dataHora": "2026-05-22T15:05:00.000Z"
+  }
+]
 ```
 
 ---
