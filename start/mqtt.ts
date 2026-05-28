@@ -9,12 +9,10 @@ const options: mqtt.IClientOptions = {
   clientId: `adonis_backend_${Math.random().toString(16).substring(2, 10)}`,
 }
 
-console.log('🔌 [MQTT] Tentando estabelecer conexão segura...')
 const client = mqtt.connect(brokerUrl, options)
 
-client.on('connect', () => {
-  console.log('✅ [MQTT] Conectado ao Broker Mosquitto via SSL!')
-  
+client.on('connect', () => { // Inscrever-se no tópico do MQTT.
+
   const topico = 'sensor/data'
   client.subscribe(topico, (err) => {
     if (!err) {
@@ -28,9 +26,9 @@ client.on('message', async (topic, message) => {
     const payloadString = message.toString()
     const dadosSensor = JSON.parse(payloadString)
 
-    console.log(`📥 [MQTT] Dados recebidos do ESP32:`, dadosSensor)
+    console.log(`📥 [MQTT] Dados recebidos `, dadosSensor)
 
-    // Salva no banco respeitando RIGOROSAMENTE as propriedades da sua Model
+    // Salva no banco seguindo a Model
     await LeituraSensor.create({
       idSensor: dadosSensor.idSensor,
       
