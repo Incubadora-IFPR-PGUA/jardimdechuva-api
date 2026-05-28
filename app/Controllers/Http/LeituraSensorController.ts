@@ -107,6 +107,109 @@ export default class LeituraSensorController {
     })
   }
 
+  /**
+   * Obtém leituras formatadas de sensores de chuva para visualização/gráficos.
+   * GET /api/v1/leituras/chuva
+   */
+  public async obterChuva({ request, response }: HttpContextContract) {
+    const { idSensor, dataInicio, dataFim, limit = 100 } = request.qs()
+
+    const query = LeituraSensor.query()
+      .preload('sensor', (q) => q.preload('tipoSensor'))
+      .where((q) => {
+        q.whereRaw("JSON_UNQUOTE(JSON_EXTRACT(valor_json, '$.tipo')) = ?", ['chuva'])
+          .orWhereHas('sensor', (sensorQuery) => {
+            sensorQuery.whereHas('tipoSensor', (tipoQuery) => {
+              tipoQuery.where('nome', 'like', '%chuva%')
+            })
+          })
+      })
+      .orderBy('data_hora', 'desc')
+      .limit(Number(limit) || 100)
+
+    if (idSensor) {
+      query.where('id_sensor', idSensor)
+    }
+
+    if (dataInicio) {
+      query.where('data_hora', '>=', dataInicio)
+    }
+
+    if (dataFim) {
+      query.where('data_hora', '<=', dataFim)
+    }
+
+    const leituras = await query
+
+    const formatadas = leituras.map((leitura) => {
+      const json = (leitura.valorJson as Record<string, any>) || {}
+      return {
+        idLeitura: leitura.idLeitura,
+        idSensor: leitura.idSensor,
+        sensorNome: leitura.sensor?.nome || null,
+        valor: leitura.valor,
+        deltaV: json.deltaV ?? json.delta_v ?? json.raw ?? leitura.valor,
+        status: json.status ?? (json.chovendo ? 'chovendo' : 'seco'),
+        chovendo: json.chovendo ?? (json.status === 'chuva' || (leitura.valor !== null && leitura.valor > 0)),
+        dataHora: leitura.dataHora,
+      }
+    })
+
+    return response.ok(formatadas)
+  }
+
+  /**
+   * Obtém leituras formatadas de clima (temperatura e umidade) para visualização/gráficos.
+   * GET /api/v1/leituras/clima
+   */
+  public async obterClima({ request, response }: HttpContextContract) {
+    const { idSensor, dataInicio, dataFim, limit = 100 } = request.qs()
+
+    const query = LeituraSensor.query()
+      .preload('sensor', (q) => q.preload('tipoSensor'))
+      .where((q) => {
+        q.whereRaw("JSON_UNQUOTE(JSON_EXTRACT(valor_json, '$.tipo')) = ?", ['clima'])
+          .orWhereHas('sensor', (sensorQuery) => {
+            sensorQuery.whereHas('tipoSensor', (tipoQuery) => {
+              tipoQuery.where('nome', 'like', '%clima%')
+                .orWhere('nome', 'like', '%dht%')
+                .orWhere('nome', 'like', '%temperatura%')
+                .orWhere('nome', 'like', '%umidade%')
+            })
+          })
+      })
+      .orderBy('data_hora', 'desc')
+      .limit(Number(limit) || 100)
+
+    if (idSensor) {
+      query.where('id_sensor', idSensor)
+    }
+
+    if (dataInicio) {
+      query.where('data_hora', '>=', dataInicio)
+    }
+
+    if (dataFim) {
+      query.where('data_hora', '<=', dataFim)
+    }
+
+    const leituras = await query
+
+    const formatadas = leituras.map((leitura) => {
+      const json = (leitura.valorJson as Record<string, any>) || {}
+      return {
+        idLeitura: leitura.idLeitura,
+        idSensor: leitura.idSensor,
+        sensorNome: leitura.sensor?.nome || null,
+        temperature: json.temperature ?? json.temperatura ?? leitura.valor,
+        humidity: json.humidity ?? json.umidade ?? null,
+        dataHora: leitura.dataHora,
+      }
+    })
+
+    return response.ok(formatadas)
+  }
+
   public async show({ params, response }: HttpContextContract) {
     const leitura = await LeituraSensor.query()
       .where('id_leitura', params.id)
