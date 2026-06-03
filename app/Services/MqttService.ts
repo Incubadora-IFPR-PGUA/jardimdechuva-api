@@ -17,7 +17,7 @@ class MqttService {
     this.client.on('connect', () => {
       console.log('[MQTT] Conectado ao broker')
 
-      const topicos = ['sensor/data', 'sensor/water']
+      const topicos = ['sensor/data', 'sensor/water', 'sensor/light']
       topicos.forEach((topico) => {
         this.client.subscribe(topico, (err) => {
           if (err) console.error(`[MQTT] Erro ao subscrever ${topico}:`, err)
@@ -30,9 +30,7 @@ class MqttService {
       try {
         const payload = JSON.parse(message.toString())
         console.log(`[MQTT] Tópico: ${topic}`, payload)
-
-        if (topic === 'sensor/data')  await this.handleSensorData(topic, payload)
-        if (topic === 'sensor/water') await this.handleSensorData(topic, payload)
+        await this.handleSensorData(topic, payload)
       } catch (err) {
         console.error('[MQTT] Payload inválido:', err)
       }
@@ -52,13 +50,16 @@ class MqttService {
         return
       }
 
+      // Extrai o valor principal dependendo do tipo de sensor
+      const valor = payload.temperature ?? payload.raw ?? payload.lux ?? null
+
       await LeituraSensor.create({
         idSensor: sensor.idSensor,
-        valor: payload.temperature ?? payload.raw ?? null,
+        valor,
         valorJson: payload,
       })
 
-      sensor.valorAtual = payload.temperature ?? payload.raw ?? null
+      sensor.valorAtual = valor
       sensor.atualizadoEm = DateTime.now()
       await sensor.save()
 
