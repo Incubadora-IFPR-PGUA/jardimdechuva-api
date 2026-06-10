@@ -39,7 +39,7 @@ client.on('message', async (topic, message) => {
       valorJson: {
         chovendo: dadosSensor.chovendo,
         raw: dadosSensor.raw,
-        statusTexto: dadosSensor.chovendo ? 'Chovendo' : 'Seco'
+        statusTexto: dadosSensor.chovendo ? 'Chovendo' : 'Seco',
       }
     })
 
