@@ -210,6 +210,115 @@ export default class LeituraSensorController {
     return response.ok(formatadas)
   }
 
+  /**
+   * Registra leitura de qualidade do ar (pm25 e/ou pm10).
+   * POST /api/v1/leituras/ar
+   */
+  public async registrarAr({ request, response }: HttpContextContract) {
+    const body = await request.validate({
+      schema: schema.create({
+        idSensor: schema.number([rules.exists({ table: 'sensores', column: 'id_sensor' })]),
+        pm25: schema.number.optional(),
+        pm10: schema.number.optional(),
+      }),
+      messages: {
+        'idSensor.required': 'Informe o id do sensor de ar (idSensor)',
+        'idSensor.exists': 'Sensor não encontrado',
+      },
+    })
+
+    const parsed = parseSensorPayload(
+      { pm25: body.pm25, pm10: body.pm10 },
+      'api'
+    )
+
+    const leitura = await LeituraSensorService.registrar({
+      idSensor: body.idSensor,
+      valor: parsed.valor,
+      estadoAtual: parsed.estadoAtual,
+      valorJson: parsed.valorJson,
+    })
+
+    return response.created({
+      mensagem: 'Leitura de qualidade do ar registrada',
+      leitura,
+    })
+  }
+
+  /**
+   * Obtém leituras formatadas de qualidade do ar para visualização/gráficos.
+   * GET /api/v1/leituras/ar
+   */
+  public async obterAr({ request, response }: HttpContextContract) {
+    const { idSensor, dataInicio, dataFim, limit = 100 } = request.qs()
+
+    const query = LeituraSensor.query()
+      .preload('sensor', (q) => q.preload('tipoSensor'))
+      .where((q) => {
+        // Dados novos: campo tipo = 'ar' gravado pelo parser
+        q.whereRaw("JSON_UNQUOTE(JSON_EXTRACT(valor_json, '$.tipo')) = ?", ['ar'])
+          // Dados legados do ESP32: JSON com pm25 ou pm10 mas sem campo tipo
+          .orWhereRaw("JSON_EXTRACT(valor_json, '$.pm25') IS NOT NULL")
+          .orWhereRaw("JSON_EXTRACT(valor_json, '$.pm10') IS NOT NULL")
+          // Fallback por tipo de sensor cadastrado
+          .orWhereHas('sensor', (sensorQuery) => {
+            sensorQuery.whereHas('tipoSensor', (tipoQuery) => {
+              tipoQuery
+                .where('nome', 'like', '%pm25%')
+                .orWhere('nome', 'like', '%pm10%')
+                .orWhere('nome', 'like', '%qualidade%')
+                .orWhere('nome', 'like', '%partícula%')
+            })
+          })
+      })
+      .orderBy('data_hora', 'desc')
+      .limit(Number(limit) || 100)
+
+
+    if (idSensor) {
+      query.where('id_sensor', idSensor)
+    }
+
+    if (dataInicio) {
+      query.where('data_hora', '>=', dataInicio)
+    }
+
+    if (dataFim) {
+      query.where('data_hora', '<=', dataFim)
+    }
+
+    const leituras = await query
+
+    const formatadas = leituras.map((leitura) => {
+      const json = (leitura.valorJson as Record<string, any>) || {}
+      const pm25Val: number | null = json.pm25 ?? json.pm2_5 ?? null
+      const pm10Val: number | null = json.pm10 ?? null
+      const iaq = pm25Val ?? pm10Val
+
+      let qualidade: string | null = null
+      if (iaq !== null) {
+        if (iaq <= 12) qualidade = 'bom'
+        else if (iaq <= 35.4) qualidade = 'moderado'
+        else if (iaq <= 55.4) qualidade = 'insalubre_grupos_sensiveis'
+        else if (iaq <= 150.4) qualidade = 'insalubre'
+        else if (iaq <= 250.4) qualidade = 'muito_insalubre'
+        else qualidade = 'perigoso'
+      }
+
+      return {
+        idLeitura: leitura.idLeitura,
+        idSensor: leitura.idSensor,
+        sensorNome: leitura.sensor?.nome || null,
+        pm25: pm25Val,
+        pm10: pm10Val,
+        qualidade,
+        dataHora: leitura.dataHora,
+      }
+    })
+
+    return response.ok(formatadas)
+  }
+
   public async show({ params, response }: HttpContextContract) {
     const leitura = await LeituraSensor.query()
       .where('id_leitura', params.id)

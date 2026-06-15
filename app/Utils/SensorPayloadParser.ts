@@ -1,4 +1,4 @@
-export type TipoLeitura = 'chuva' | 'clima' | 'generico'
+export type TipoLeitura = 'chuva' | 'clima' | 'ar' | 'generico'
 
 export type LeituraParseada = {
   tipo: TipoLeitura
@@ -38,6 +38,33 @@ export function parseSensorPayload(
         tipo: 'clima',
         humidity,
         temperature,
+      },
+    }
+  }
+
+  // Qualidade do ar: pm25 e/ou pm10
+  const pm25 = num(payload.pm25 ?? payload.pm2_5 ?? payload['pm2.5'])
+  const pm10 = num(payload.pm10)
+
+  if (pm25 !== null || pm10 !== null) {
+    const iaqPrincipal = pm25 ?? pm10!
+    let estadoQualidade: string
+    if (iaqPrincipal <= 12) estadoQualidade = 'bom'
+    else if (iaqPrincipal <= 35.4) estadoQualidade = 'moderado'
+    else if (iaqPrincipal <= 55.4) estadoQualidade = 'insalubre_grupos_sensiveis'
+    else if (iaqPrincipal <= 150.4) estadoQualidade = 'insalubre'
+    else if (iaqPrincipal <= 250.4) estadoQualidade = 'muito_insalubre'
+    else estadoQualidade = 'perigoso'
+
+    return {
+      tipo: 'ar',
+      valor: iaqPrincipal,
+      estadoAtual: estadoQualidade,
+      valorJson: {
+        ...base,
+        tipo: 'ar',
+        pm25,
+        pm10,
       },
     }
   }
