@@ -14,8 +14,6 @@ Route.get('/', async () => {
 Route.get('/docs/openapi.yaml', 'DocsController.openapi')
 Route.get('/docs', 'DocsController.index')
 
-Route.post('/api/v1/auth/login', 'AuthController.login')
-Route.post('/api/v1/auth/logout', 'AuthController.logout').middleware('auth:api')
 
 Route.post('/webhook/deploy/:token', async ({ params, response }) => {
   const secret = Env.get('WEBHOOK_SECRET', '')
@@ -39,21 +37,14 @@ Route.post('/webhook/deploy/:token', async ({ params, response }) => {
   return response.send('Deploying...')
 })
 
-Route.group(() => {
-  Route.resource('usuarios', 'UsuarioController').apiOnly()
-  Route.resource('jardins', 'JardimController').apiOnly()
-  Route.resource('dispositivos', 'DispositivoController').apiOnly()
-  Route.resource('sensores', 'SensorController').apiOnly()
-  Route.resource('atuadores', 'AtuadorController').apiOnly()
-  Route.resource('automacoes', 'AutomacaoController').apiOnly()
-  Route.resource('alertas', 'AlertaController').apiOnly()
-  Route.post('leituras/chuva', 'LeituraSensorController.registrarChuva')
-  Route.get('leituras/chuva', 'LeituraSensorController.obterChuva')
-  Route.post('leituras/clima', 'LeituraSensorController.registrarClima')
-  Route.get('leituras/clima', 'LeituraSensorController.obterClima')
-  Route.post('leituras/ar', 'LeituraSensorController.registrarAr')
-  Route.get('leituras/ar', 'LeituraSensorController.obterAr')
-  Route.resource('leituras', 'LeituraSensorController').apiOnly()
-  Route.resource('tipos-dispositivos', 'TipoDispositivoController').apiOnly()
-  Route.resource('tipos-sensores', 'TipoSensorController').apiOnly()
-}).prefix('/api/v1')
+import './routes/auth'
+import './routes/usuarios'
+import './routes/jardins'
+import './routes/dispositivos'
+import './routes/sensores'
+import './routes/atuadores'
+import './routes/automacoes'
+import './routes/alertas'
+import './routes/leituras'
+import './routes/tipos-dispositivos'
+import './routes/tipos-sensores'
