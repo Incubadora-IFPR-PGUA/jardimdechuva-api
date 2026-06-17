@@ -14,6 +14,9 @@ Route.get('/', async () => {
 Route.get('/docs/openapi.yaml', 'DocsController.openapi')
 Route.get('/docs', 'DocsController.index')
 
+Route.post('/api/v1/auth/login', 'AuthController.login')
+Route.post('/api/v1/auth/logout', 'AuthController.logout').middleware('auth:api')
+
 Route.post('/webhook/deploy/:token', async ({ params, response }) => {
   const secret = Env.get('WEBHOOK_SECRET', '')
 

@@ -3,8 +3,16 @@ import { BaseModel, column, hasMany, manyToMany, HasMany, ManyToMany } from '@io
 import Jardim from './Jardim'
 import Cargo from './Cargo'
 import LogSistema from './LogSistema'
+import Hash from '@ioc:Adonis/Core/Hash'
+import { beforeSave } from '@ioc:Adonis/Lucid/Orm' // adicione ao import existente
 
 export default class Usuario extends BaseModel {
+  @beforeSave()
+  public static async hashSenha(usuario: Usuario) {
+    if (usuario.$dirty.senha) {
+      usuario.senha = await Hash.make(usuario.senha)
+    }
+  }
   public static table = 'usuarios'
 
   @column({ isPrimary: true })
