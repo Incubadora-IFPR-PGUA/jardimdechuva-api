@@ -9,14 +9,22 @@ import Env from '@ioc:Adonis/Core/Env'
 
 export default class AuthController {
   public async login({ request, response }: HttpContextContract) {
-    const { email, password } = request.only(['email', 'password'])
+    const { email, senha } = request.only(['email', 'senha'])
 
-    const usuario = await Usuario.findBy('email', email)
+    // Busca já com organizações e cargos
+    const usuario = await Usuario.query()
+      .where('email', email)
+      .whereNull('deleted_at')
+      .preload('organizacoes', (orgQuery) => {
+        orgQuery.preload('plano')
+      })
+      .first()
+
     if (!usuario) {
       return response.unauthorized({ message: 'Credenciais inválidas', status: 401 })
     }
 
-    const isValid = await Hash.verify(usuario.senha, password)
+    const isValid = await Hash.verify(usuario.senha, senha)
     if (!isValid) {
       return response.unauthorized({ message: 'Credenciais inválidas', status: 401 })
     }
@@ -28,13 +36,17 @@ export default class AuthController {
     await RefreshToken.create({
       idUsuario: usuario.idUsuario,
       token: refreshTokenString,
-      expiraEm: DateTime.now().plus({ days: 30 })
+      expiraEm: DateTime.now().plus({ days: 30 }),
     })
 
     return response.ok({
-      data: { access_token: accessToken, refresh_token: refreshTokenString },
+      data: {
+        access_token: accessToken,
+        refresh_token: refreshTokenString,
+        usuario: usuario.serialize(),
+      },
       message: 'Login realizado',
-      status: 200
+      status: 200,
     })
   }
 
