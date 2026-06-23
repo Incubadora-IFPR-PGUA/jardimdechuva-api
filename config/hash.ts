@@ -1,9 +1,15 @@
 import Env from '@ioc:Adonis/Core/Env'
 import { hashConfig } from '@adonisjs/core/build/config'
+
 export default hashConfig({
-  default: Env.get('HASH_DRIVER', 'scrypt'),
+  default: Env.get('HASH_DRIVER', 'bcrypt'),
 
   list: {
+    bcrypt: {
+      driver: 'bcrypt',
+      rounds: 10,
+    },
+
     scrypt: {
       driver: 'scrypt',
       cost: 16384,
@@ -21,10 +27,6 @@ export default hashConfig({
       memory: 4096,
       parallelism: 1,
       saltSize: 16,
-    },
-    bcrypt: {
-      driver: 'bcrypt',
-      rounds: 10,
     },
   },
 })

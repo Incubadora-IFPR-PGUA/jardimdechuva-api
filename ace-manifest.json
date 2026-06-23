@@ -1,5 +1,16 @@
 {
   "commands": {
+    "drop:tables": {
+      "settings": {
+        "loadApp": true
+      },
+      "commandPath": "./commands/DropTables",
+      "commandName": "drop:tables",
+      "description": "Drops the new tables and clears the migration schema for them.",
+      "args": [],
+      "aliases": [],
+      "flags": []
+    },
     "dump:rcfile": {
       "settings": {},
       "commandPath": "@adonisjs/core/build/commands/DumpRc",

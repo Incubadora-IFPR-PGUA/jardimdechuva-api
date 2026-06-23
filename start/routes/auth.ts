@@ -1,6 +1,8 @@
 import Route from '@ioc:Adonis/Core/Route'
 
 Route.group(() => {
-  Route.post('/auth/login', 'AuthController.login')
-  Route.post('/auth/logout', 'AuthController.logout').middleware('auth:api')
-}).prefix('/api/v1')
+  Route.post('/login', 'AuthController.login')
+  Route.post('/refresh', 'AuthController.refresh')
+  Route.post('/logout', 'AuthController.logout')
+  Route.get('/me', 'AuthController.me')
+}).prefix('/api/v1/auth')

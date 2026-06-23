@@ -13,8 +13,9 @@ export default class Cargo extends BaseModel {
   @column()
   public descricao: string | null
 
+  // Adicionar isso:
   @manyToMany(() => Usuario, {
-    pivotTable: 'usuario_cargos',
+    pivotTable: 'usuario_organizacoes',
     localKey: 'idCargo',
     pivotForeignKey: 'id_cargo',
     relatedKey: 'idUsuario',

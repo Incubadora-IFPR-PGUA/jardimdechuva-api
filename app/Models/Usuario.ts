@@ -1,7 +1,7 @@
 import { DateTime } from 'luxon'
 import { BaseModel, column, hasMany, manyToMany, HasMany, ManyToMany } from '@ioc:Adonis/Lucid/Orm'
 import Jardim from './Jardim'
-import Cargo from './Cargo'
+import Organizacao from './Organizacao'
 import LogSistema from './LogSistema'
 import Hash from '@ioc:Adonis/Core/Hash'
 import { beforeSave } from '@ioc:Adonis/Lucid/Orm' // adicione ao import existente
@@ -30,6 +30,9 @@ export default class Usuario extends BaseModel {
   @column()
   public ativo: boolean
 
+  @column()
+  public avatarUrl: string | null
+
   @column.dateTime({ autoCreate: true })
   public createdAt: DateTime
 
@@ -42,14 +45,15 @@ export default class Usuario extends BaseModel {
   @hasMany(() => Jardim, { foreignKey: 'idUsuario' })
   public jardins: HasMany<typeof Jardim>
 
-  @manyToMany(() => Cargo, {
-    pivotTable: 'usuario_cargos',
+  @manyToMany(() => Organizacao, {
+    pivotTable: 'usuario_organizacoes',
     localKey: 'idUsuario',
     pivotForeignKey: 'id_usuario',
-    relatedKey: 'idCargo',
-    pivotRelatedForeignKey: 'id_cargo',
+    relatedKey: 'idOrganizacao',
+    pivotRelatedForeignKey: 'id_organizacao',
+    pivotColumns: ['id_cargo'],
   })
-  public cargos: ManyToMany<typeof Cargo>
+  public organizacoes: ManyToMany<typeof Organizacao>
 
   @hasMany(() => LogSistema, { foreignKey: 'idUsuario' })
   public logs: HasMany<typeof LogSistema>
