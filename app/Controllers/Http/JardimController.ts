@@ -1,6 +1,7 @@
 import { DateTime } from 'luxon'
 import type { HttpContextContract } from '@ioc:Adonis/Core/HttpContext'
 import Jardim from 'App/Models/Jardim'
+import Usuario from 'App/Models/Usuario'
 
 export default class JardimController {
 
@@ -17,10 +18,21 @@ export default class JardimController {
   public async store(ctx: HttpContextContract) {
     const usuario = ctx['jwtUser'] as Usuario
     const data = ctx.request.only(['nome', 'descricao', 'localizacao'])
+
+    // Busca a organização que o usuário pertence
+    const usuarioComOrg = await Usuario.query()
+      .where('id_usuario', usuario.idUsuario)
+      .preload('organizacoes')
+      .firstOrFail()
+
+    const idOrganizacao = usuarioComOrg.organizacoes?.[0]?.idOrganizacao ?? null
+
     const jardim = await Jardim.create({
       ...data,
       idUsuario: usuario.idUsuario,
+      idOrganizacao,
     })
+
     return ctx.response.created(jardim)
   }
 

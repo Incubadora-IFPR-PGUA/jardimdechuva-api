@@ -23,7 +23,6 @@ export default class JwtAuth {
     } catch (e){
       console.error('[JwtAuth] erro:', e.message) // 👈 vai mostrar o motivo exato
       return ctx.response.unauthorized({ message: 'Token inválido ou expirado' })
-      return ctx.response.unauthorized({ message: 'Token inválido ou expirado' })
     }
   }
 }
