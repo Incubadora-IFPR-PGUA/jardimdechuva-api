@@ -13,10 +13,7 @@ export default class JwtAuth {
     const token = authHeader.replace('Bearer ', '')
     try {
       const secret = Env.get('APP_KEY')
-      console.log('[JwtAuth] secret:', secret)
-      console.log('[JwtAuth] token:', token)
       const payload = jwt.verify(token, secret) as { idUsuario: number }
-      console.log('[JwtAuth] payload:', payload)
       const usuario = await Usuario.findOrFail(payload.idUsuario)
       ctx['jwtUser'] = usuario  // guarda no contexto
       await next()
