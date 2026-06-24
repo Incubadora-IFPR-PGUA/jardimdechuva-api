@@ -14,7 +14,7 @@ export default class Jardim extends BaseModel {
   public idUsuario: number
 
   @column()
-  public idOrganizacao: number
+  public idOrganizacao: number 
 
   @column()
   public nome: string
