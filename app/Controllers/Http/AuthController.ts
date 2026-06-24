@@ -18,6 +18,7 @@ export default class AuthController {
       .preload('organizacoes', (orgQuery) => {
         orgQuery.preload('plano')
       })
+      .preload('cargos')
       .first()
 
     if (!usuario) {
@@ -97,6 +98,7 @@ export default class AuthController {
       const usuario = await Usuario.query()
         .where('idUsuario', payload.idUsuario)
         .preload('organizacoes')
+        .preload('cargos')
         .firstOrFail()
       return response.ok({ data: usuario, message: 'Usuário logado', status: 200 })
     } catch (e) {

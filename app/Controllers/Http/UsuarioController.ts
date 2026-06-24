@@ -7,6 +7,7 @@ export default class UsuarioController {
     const usuarios = await Usuario.query()
       .whereNull('deleted_at')
       .preload('cargos')
+      .preload('organizacoes')
     return response.ok(usuarios)
   }
 
@@ -49,6 +50,7 @@ export default class UsuarioController {
       .whereNull('deleted_at')
       .where('id_usuario', params.id)
       .preload('cargos')
+      .preload('organizacoes')
       .preload('jardins')
       .firstOrFail()
     return response.ok(usuario)
