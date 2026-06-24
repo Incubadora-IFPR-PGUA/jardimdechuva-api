@@ -7,3 +7,8 @@ Server.middleware.register([
 Server.middleware.registerNamed({
   auth: () => import('App/Middleware/Auth'),
 })
+
+Server.middleware.registerNamed({
+  auth: () => import('App/Middleware/Auth'),
+  jwtAuth: () => import('App/Middleware/JwtAuth'), // 👈 adiciona
+})

@@ -3,18 +3,25 @@ import type { HttpContextContract } from '@ioc:Adonis/Core/HttpContext'
 import Jardim from 'App/Models/Jardim'
 
 export default class JardimController {
-  public async index({ response }: HttpContextContract) {
+
+  public async index(ctx: HttpContextContract) {
+    const usuario = ctx['jwtUser'] as Usuario
     const jardins = await Jardim.query()
+      .where('id_usuario', usuario.idUsuario)
       .whereNull('deleted_at')
       .preload('usuario')
       .preload('dispositivos')
-    return response.ok(jardins)
+    return ctx.response.ok(jardins)
   }
 
-  public async store({ request, response }: HttpContextContract) {
-    const data = request.only(['idUsuario', 'nome', 'descricao', 'localizacao'])
-    const jardim = await Jardim.create(data)
-    return response.created(jardim)
+  public async store(ctx: HttpContextContract) {
+    const usuario = ctx['jwtUser'] as Usuario
+    const data = ctx.request.only(['nome', 'descricao', 'localizacao'])
+    const jardim = await Jardim.create({
+      ...data,
+      idUsuario: usuario.idUsuario,
+    })
+    return ctx.response.created(jardim)
   }
 
   public async show({ params, response }: HttpContextContract) {
