@@ -23,7 +23,7 @@ export default class Jardim extends BaseModel {
   public descricao: string | null
 
   @column()
-  public localizacao: any | null
+  public localizacao: string | null
 
   @column.dateTime({ autoCreate: true })
   public createdAt: DateTime
