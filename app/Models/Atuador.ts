@@ -19,7 +19,7 @@ export default class Atuador extends BaseModel {
   public mqttTopicoComando: string
 
   @column()
-  public estadoAtual: string | null
+  public estadoAtual: string
 
   @column()
   public localizacao: any | null

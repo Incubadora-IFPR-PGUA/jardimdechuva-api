@@ -1,13 +1,19 @@
-import 'App/Services/MqttService'
 import Env from '@ioc:Adonis/Core/Env'
-import MqttService from 'App/Services/MqttService'
-MqttService.connect()
-
 import Route from '@ioc:Adonis/Core/Route'
 
 Route.get('/', async () => {
-  return { hello: 'world' }
+  return {
+    nome: 'Jardim de Chuva API',
+    versao: '1.0.0',
+    documentacao: '/docs',
+    openapi: '/docs/openapi.yaml',
+    api: '/api/v1',
+  }
 })
+
+Route.get('/docs/openapi.yaml', 'DocsController.openapi')
+Route.get('/docs', 'DocsController.index')
+
 
 Route.post('/webhook/deploy/:token', async ({ params, response }) => {
   const secret = Env.get('WEBHOOK_SECRET', '')
@@ -31,15 +37,18 @@ Route.post('/webhook/deploy/:token', async ({ params, response }) => {
   return response.send('Deploying...')
 })
 
-Route.group(() => {
-  Route.resource('usuarios', 'UsuarioController').apiOnly()
-  Route.resource('jardins', 'JardimController').apiOnly()
-  Route.resource('dispositivos', 'DispositivoController').apiOnly()
-  Route.resource('sensores', 'SensorController').apiOnly()
-  Route.resource('atuadores', 'AtuadorController').apiOnly()
-  Route.resource('automacoes', 'AutomacaoController').apiOnly()
-  Route.resource('alertas', 'AlertaController').apiOnly()
-  Route.resource('leituras', 'LeituraSensorController').apiOnly()
-  Route.resource('tipos-dispositivos', 'TipoDispositivoController').apiOnly()
-  Route.resource('tipos-sensores', 'TipoSensorController').apiOnly()
-}).prefix('/api/v1')
+import './routes/auth'
+import './routes/usuarios'
+import './routes/jardins'
+import './routes/dispositivos'
+import './routes/sensores'
+import './routes/atuadores'
+import './routes/automacoes'
+import './routes/alertas'
+import './routes/leituras'
+import './routes/tipos-dispositivos'
+import './routes/tipos-sensores'
+import './routes/organizacoes'
+import './routes/planos'
+import './routes/convites'
+import './routes/auth'

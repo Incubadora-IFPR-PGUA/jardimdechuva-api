@@ -14,6 +14,7 @@ export default class LeituraSensor extends BaseModel {
   @column()
   public valor: number | null
 
+  // Tipo de dado Json no banco.
   @column()
   public valorJson: object | null
 

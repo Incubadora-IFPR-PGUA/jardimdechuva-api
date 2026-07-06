@@ -1,71 +1,126 @@
-import mqtt from 'mqtt'
+import mqtt, { IClientOptions } from 'mqtt'
 import Env from '@ioc:Adonis/Core/Env'
-import { DateTime } from 'luxon'
 import Sensor from 'App/Models/Sensor'
-import LeituraSensor from 'App/Models/LeituraSensor'
+import LeituraSensorService from 'App/Services/LeituraSensorService'
+import { parseSensorPayload } from 'App/Utils/SensorPayloadParser'
 
 class MqttService {
   private client: mqtt.MqttClient
 
-  public connect() {
-    const brokerUrl = Env.get('MQTT_BROKER_URL')
-    const username  = Env.get('MQTT_USER')
-    const password  = Env.get('MQTT_PASSWORD')
+  private getTopicos(): string[] {
+    const raw = Env.get('MQTT_TOPICS', 'sensor_esp,sensor_clima')
+    return raw.split(',').map((t) => t.trim()).filter(Boolean)
+  }
 
-    this.client = mqtt.connect(brokerUrl, { username, password })
+  public publish(topico: string, payload: Record<string, unknown>, options?: mqtt.IClientPublishOptions) {
+    if (!this.client || !this.client.connected) {
+      console.warn(`⚠️ [MQTT] Tentativa de publicar em "${topico}" sem conexão ativa`)
+      return
+    }
+
+    const payloadString = JSON.stringify(payload)
+    this.client.publish(topico, payloadString, options ?? {}, (err) => {
+      if (err) console.error(`❌ [MQTT] Falha ao publicar em ${topico}:`, err)
+      else console.log(`📤 [MQTT] [${topico}]`, payloadString)
+    })
+  }
+
+  // Alias para manter retrocompatibilidade caso o nome publicarComando seja esperado
+  public publicarComando(topico: string, payload: Record<string, unknown>, options?: mqtt.IClientPublishOptions) {
+    this.publish(topico, payload, options)
+  }
+
+  public connect() {
+    const brokerUrl = Env.get('MQTT_BROKER_URL', '') as string
+    const username = Env.get('MQTT_USER', '') as string
+    const password = Env.get('MQTT_PASSWORD', '') as string
+
+    const options: IClientOptions = {
+      username: username || undefined,
+      password: password || undefined,
+      clientId: `adonis_backend_${Math.random().toString(16).substring(2, 10)}`,
+      reconnectPeriod: 5000,
+    }
+
+    console.log(`🔌 [MQTT] Conectando em ${brokerUrl} ...`)
+    this.client = mqtt.connect(brokerUrl, options)
 
     this.client.on('connect', () => {
-      console.log('[MQTT] Conectado ao broker')
+      console.log('✅ [MQTT] Conectado ao broker Mosquitto')
 
-      const topicos = ['sensor/data', 'sensor/water', 'sensor/light']
-      topicos.forEach((topico) => {
+      this.getTopicos().forEach((topico) => {
         this.client.subscribe(topico, (err) => {
-          if (err) console.error(`[MQTT] Erro ao subscrever ${topico}:`, err)
-          else console.log(`[MQTT] Subscrito em ${topico}`)
+          if (err) console.error(`❌ [MQTT] Falha ao subscrever ${topico}:`, err)
+          else console.log(`📡 [MQTT] Escutando tópico: ${topico}`)
         })
       })
     })
 
     this.client.on('message', async (topic, message) => {
       try {
-        const payload = JSON.parse(message.toString())
-        console.log(`[MQTT] Tópico: ${topic}`, payload)
+        const payloadString = message.toString()
+        console.log(`📥 [MQTT] [${topic}]`, payloadString)
+
+        const payload = JSON.parse(payloadString) as Record<string, unknown>
         await this.handleSensorData(topic, payload)
       } catch (err) {
-        console.error('[MQTT] Payload inválido:', err)
+        console.error('❌ [MQTT] Erro ao processar mensagem:', err)
       }
     })
 
     this.client.on('error', (err) => {
-      console.error('[MQTT] Erro:', err)
+      console.error('❌ [MQTT] Erro na conexão:', err)
     })
   }
 
-  private async handleSensorData(topic: string, payload: Record<string, any>) {
+  public publicar(topico: string, payload: string) {
+    if (!this.client || !this.client.connected) {
+      console.error(`❌ [MQTT] Cliente não conectado, não foi possível publicar em ${topico}`)
+      return
+    }
+
+    this.client.publish(topico, payload, { retain: true }, (err) => {
+      if (err) console.error(`❌ [MQTT] Falha ao publicar em ${topico}:`, err)
+      else console.log(`📤 [MQTT] Publicado [${topico}]:`, payload)
+    })
+  }
+
+  private async handleSensorData(topic: string, payload: Record<string, unknown>) {
     try {
-      const sensor = await Sensor.findBy('mqtt_topico_leitura', topic)
+      const sensor = await Sensor.query()
+        .whereNull('deleted_at')
+        .where('mqtt_topico_leitura', topic)
+        .first()
 
       if (!sensor) {
-        console.warn(`[MQTT] Sensor não cadastrado para o tópico: ${topic}`)
+        console.warn(
+          `⚠️ [MQTT] Nenhum sensor com mqtt_topico_leitura = "${topic}". Cadastre no banco.`
+        )
         return
       }
 
-      // Extrai o valor principal dependendo do tipo de sensor
-      const valor = payload.temperature ?? payload.raw ?? payload.lux ?? null
+      const parsed = parseSensorPayload(payload, 'mqtt', topic)
 
-      await LeituraSensor.create({
+      console.log(`--- Leitura ${parsed.tipo} (sensor ${sensor.idSensor}) ---`)
+      if (parsed.tipo === 'clima') {
+        console.log('  temperature:', payload.temperature)
+        console.log('  humidity:', payload.humidity)
+      } else if (parsed.tipo === 'chuva') {
+        console.log('  status:', payload.status)
+        console.log('  deltaV:', payload.deltaV)
+      }
+      console.log('----------------------------------------')
+
+      await LeituraSensorService.registrar({
         idSensor: sensor.idSensor,
-        valor,
-        valorJson: payload,
+        valor: parsed.valor,
+        estadoAtual: parsed.estadoAtual,
+        valorJson: parsed.valorJson,
       })
 
-      sensor.valorAtual = valor
-      sensor.atualizadoEm = DateTime.now()
-      await sensor.save()
-
-      console.log(`[MQTT] Leitura salva — sensor ${sensor.idSensor}:`, payload)
+      console.log(`✅ [MQTT] Leitura salva (sensor ${sensor.idSensor})`)
     } catch (err) {
-      console.error('[MQTT] Erro ao salvar leitura:', err)
+      console.error('❌ [MQTT] Erro ao salvar no banco:', err)
     }
   }
 }

@@ -1,6 +1,7 @@
 import { DateTime } from 'luxon'
 import { BaseModel, column, belongsTo, hasMany, BelongsTo, HasMany } from '@ioc:Adonis/Lucid/Orm'
 import Usuario from './Usuario'
+import Organizacao from './Organizacao'
 import Dispositivo from './Dispositivo'
 
 export default class Jardim extends BaseModel {
@@ -13,13 +14,16 @@ export default class Jardim extends BaseModel {
   public idUsuario: number
 
   @column()
+  public idOrganizacao: number 
+
+  @column()
   public nome: string
 
   @column()
   public descricao: string | null
 
   @column()
-  public localizacao: any | null
+  public localizacao: string | null
 
   @column.dateTime({ autoCreate: true })
   public createdAt: DateTime
@@ -32,6 +36,9 @@ export default class Jardim extends BaseModel {
 
   @belongsTo(() => Usuario, { foreignKey: 'idUsuario' })
   public usuario: BelongsTo<typeof Usuario>
+
+  @belongsTo(() => Organizacao, { foreignKey: 'idOrganizacao' })
+  public organizacao: BelongsTo<typeof Organizacao>
 
   @hasMany(() => Dispositivo, { foreignKey: 'idJardim' })
   public dispositivos: HasMany<typeof Dispositivo>
