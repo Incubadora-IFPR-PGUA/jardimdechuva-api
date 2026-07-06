@@ -1,6 +1,7 @@
 import { DateTime } from 'luxon'
 import type { HttpContextContract } from '@ioc:Adonis/Core/HttpContext'
 import Atuador from 'App/Models/Atuador'
+import MqttService from 'App/Services/MqttService'
 
 export default class AtuadorController {
   public async index({ response }: HttpContextContract) {
@@ -30,8 +31,20 @@ export default class AtuadorController {
 
   public async update({ params, request, response }: HttpContextContract) {
     const atuador = await Atuador.findOrFail(params.id)
+
+    console.log('BODY recebido:', request.only(['nome', 'estadoAtual', 'mqttTopicoComando', 'localizacao']))
+
     atuador.merge(request.only(['nome', 'estadoAtual', 'mqttTopicoComando', 'localizacao']))
+
+    console.log('estadoAtual APÓS merge:', atuador.estadoAtual, typeof atuador.estadoAtual)
+
     await atuador.save()
+
+    console.log('estadoAtual APÓS save:', atuador.estadoAtual, typeof atuador.estadoAtual)
+    const ligar = atuador.estadoAtual === 'LIGADO'
+
+    MqttService.publicar(atuador.mqttTopicoComando, ligar ? '1' : '0')
+
     return response.ok(atuador)
   }
 

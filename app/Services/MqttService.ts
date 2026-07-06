@@ -55,6 +55,18 @@ class MqttService {
     })
   }
 
+  public publicar(topico: string, payload: string) {
+    if (!this.client || !this.client.connected) {
+      console.error(`❌ [MQTT] Cliente não conectado, não foi possível publicar em ${topico}`)
+      return
+    }
+
+    this.client.publish(topico, payload, { retain: true }, (err) => {
+      if (err) console.error(`❌ [MQTT] Falha ao publicar em ${topico}:`, err)
+      else console.log(`📤 [MQTT] Publicado [${topico}]:`, payload)
+    })
+  }
+
   private async handleSensorData(topic: string, payload: Record<string, unknown>) {
     try {
       const sensor = await Sensor.query()

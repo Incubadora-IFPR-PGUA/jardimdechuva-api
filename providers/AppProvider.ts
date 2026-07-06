@@ -17,6 +17,9 @@ export default class AppProvider {
       return
     }
 
+    const { default: MqttService } = await import('App/Services/MqttService')
+    MqttService.connect()
+
     const { default: printStartupBanner } = await import('App/Utils/StartupBanner')
     await printStartupBanner()
   }
