@@ -12,10 +12,28 @@ class MqttService {
     return raw.split(',').map((t) => t.trim()).filter(Boolean)
   }
 
+  public publish(topico: string, payload: Record<string, unknown>, options?: mqtt.IClientPublishOptions) {
+    if (!this.client || !this.client.connected) {
+      console.warn(`⚠️ [MQTT] Tentativa de publicar em "${topico}" sem conexão ativa`)
+      return
+    }
+
+    const payloadString = JSON.stringify(payload)
+    this.client.publish(topico, payloadString, options ?? {}, (err) => {
+      if (err) console.error(`❌ [MQTT] Falha ao publicar em ${topico}:`, err)
+      else console.log(`📤 [MQTT] [${topico}]`, payloadString)
+    })
+  }
+
+  // Alias para manter retrocompatibilidade caso o nome publicarComando seja esperado
+  public publicarComando(topico: string, payload: Record<string, unknown>, options?: mqtt.IClientPublishOptions) {
+    this.publish(topico, payload, options)
+  }
+
   public connect() {
-    const brokerUrl = Env.get('MQTT_BROKER_URL')
-    const username = Env.get('MQTT_USER', '')
-    const password = Env.get('MQTT_PASSWORD', '')
+    const brokerUrl = Env.get('MQTT_BROKER_URL', '') as string
+    const username = Env.get('MQTT_USER', '') as string
+    const password = Env.get('MQTT_PASSWORD', '') as string
 
     const options: IClientOptions = {
       username: username || undefined,
