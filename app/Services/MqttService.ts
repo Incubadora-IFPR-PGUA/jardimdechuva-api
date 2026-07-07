@@ -86,6 +86,23 @@ class MqttService {
   }
 
   private async handleSensorData(topic: string, payload: Record<string, unknown>) {
+    // 1. Fazer o PARSE e a AUTOMAÇÃO primeiro (Isolado de erros de banco)
+    try {
+      const parsed = parseSensorPayload(payload, 'mqtt', topic)
+
+      if (parsed.tipo === 'ar') {
+        const comandoAtuador = parsed.estadoAtual === 'bom' ? '0' : '1'
+        
+        // Publica o comando para o ESP32 da lâmpada
+        this.publicar('atuador/lampada', comandoAtuador)
+        
+        console.log(`💡 [Automação] Estado: "${parsed.estadoAtual}". Comando enviado: ${comandoAtuador}`)
+      }
+    } catch (autoErr) {
+      console.error('❌ [MQTT] Erro estrito na automação da lâmpada:', autoErr)
+    }
+
+    // 2. Tentar buscar o sensor e salvar no banco (Se isso falhar, não afeta a lâmpada)
     try {
       const sensor = await Sensor.query()
         .whereNull('deleted_at')
@@ -93,34 +110,23 @@ class MqttService {
         .first()
 
       if (!sensor) {
-        console.warn(
-          `⚠️ [MQTT] Nenhum sensor com mqtt_topico_leitura = "${topic}". Cadastre no banco.`
-        )
+        console.warn(`⚠️ [MQTT] Nenhum sensor cadastrado para o tópico: "${topic}"`)
         return
       }
 
-      const parsed = parseSensorPayload(payload, 'mqtt', topic)
-
-      console.log(`--- Leitura ${parsed.tipo} (sensor ${sensor.idSensor}) ---`)
-      if (parsed.tipo === 'clima') {
-        console.log('  temperature:', payload.temperature)
-        console.log('  humidity:', payload.humidity)
-      } else if (parsed.tipo === 'chuva') {
-        console.log('  status:', payload.status)
-        console.log('  deltaV:', payload.deltaV)
-      }
-      console.log('----------------------------------------')
+      const parsedForDatabase = parseSensorPayload(payload, 'mqtt', topic)
 
       await LeituraSensorService.registrar({
         idSensor: sensor.idSensor,
-        valor: parsed.valor,
-        estadoAtual: parsed.estadoAtual,
-        valorJson: parsed.valorJson,
+        valor: parsedForDatabase.valor,
+        estadoAtual: parsedForDatabase.estadoAtual,
+        valorJson: parsedForDatabase.valorJson,
       })
 
-      console.log(`✅ [MQTT] Leitura salva (sensor ${sensor.idSensor})`)
-    } catch (err) {
-      console.error('❌ [MQTT] Erro ao salvar no banco:', err)
+      console.log(`✅ [MQTT] Leitura salva no banco (sensor ${sensor.idSensor})`)
+
+    } catch (dbErr) {
+      console.error('❌ [MQTT] Erro ao salvar no banco (mas a lâmpada foi processada):', dbErr)
     }
   }
 }
