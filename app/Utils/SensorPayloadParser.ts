@@ -1,4 +1,4 @@
-export type TipoLeitura = 'chuva' | 'clima' | 'ar' | 'generico'
+export type TipoLeitura = 'chuva' | 'clima' | 'ar' | 'solo' | 'generico' // Adicionado 'solo' para expansão de umidade/pH
 
 export type LeituraParseada = {
   tipo: TipoLeitura
@@ -14,9 +14,8 @@ function num(v: unknown): number | null {
 }
 
 /**
- * Interpreta JSON do ESP32 ou da API.
- * - Chuva: { status, deltaV }
- * - Clima: { humidity, temperature }
+ * Interpreta JSON recebido do ESP32 (via MQTT) ou da API.
+ * Identifica o tipo do sensor de acordo com as propriedades presentes no payload.
  */
 export function parseSensorPayload(
   payload: Record<string, unknown>,
@@ -25,6 +24,9 @@ export function parseSensorPayload(
 ): LeituraParseada {
   const base = { origem, topico, recebidoEm: new Date().toISOString() }
 
+  // =======================================================================
+  // 🌡️ CLIMA (Temperatura e Umidade do Ar)
+  // =======================================================================
   const humidity = num(payload.humidity ?? payload.umidade)
   const temperature = num(payload.temperature ?? payload.temperatura)
 
@@ -42,7 +44,9 @@ export function parseSensorPayload(
     }
   }
 
-  // Qualidade do ar: pm25 e/ou pm10
+  // =======================================================================
+  // 🍃 QUALIDADE DO AR (Partículas PM2.5 / PM10)
+  // =======================================================================
   const pm25 = num(payload.pm25 ?? payload.pm2_5 ?? payload['pm2.5'])
   const pm10 = num(payload.pm10)
 
@@ -69,6 +73,9 @@ export function parseSensorPayload(
     }
   }
 
+  // =======================================================================
+  // 🌧️ CHUVA (Sensor de Chuva)
+  // =======================================================================
   const deltaV = num(payload.deltaV ?? payload.delta_v)
   const valorChuva = deltaV ?? num(payload.mm) ?? num(payload.raw)
 
@@ -94,6 +101,40 @@ export function parseSensorPayload(
     }
   }
 
+  // =======================================================================
+  // 🌱 SOLO / ÁGUA (Nova seção para Umidade do Solo, pH e Sensores do Jardim)
+  // =======================================================================
+  const umidadeSolo = num(payload.umidade_solo ?? payload.soil_moisture)
+  const ph = num(payload.ph)
+
+  if (umidadeSolo !== null || ph !== null) {
+    let estadoAtual = ''
+    if (umidadeSolo !== null) {
+      if (umidadeSolo < 30) estadoAtual = 'seco'
+      else if (umidadeSolo < 70) estadoAtual = 'umido'
+      else estadoAtual = 'encharcado'
+    } else if (ph !== null) {
+      if (ph < 6) estadoAtual = 'acido'
+      else if (ph <= 7.5) estadoAtual = 'neutro'
+      else estadoAtual = 'alcalino'
+    }
+
+    return {
+      tipo: 'solo',
+      valor: umidadeSolo ?? ph,
+      estadoAtual,
+      valorJson: {
+        ...base,
+        tipo: 'solo',
+        umidadeSolo,
+        ph,
+      },
+    }
+  }
+
+  // =======================================================================
+  // ⚙️ GENÉRICO (Fallback para qualquer outra leitura)
+  // =======================================================================
   return {
     tipo: 'generico',
     valor: num(payload.valor) ?? temperature ?? valorChuva,

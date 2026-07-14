@@ -1,12 +1,6 @@
 import Database from '@ioc:Adonis/Lucid/Database'
 import Automacao from 'App/Models/Automacao'
-
-export interface LeituraParseada {
-  tipo: 'chuva' | 'clima' | 'ar' | 'generico'
-  valor: number | null
-  estadoAtual: string | null
-  valorJson: Record<string, unknown>
-}
+import { LeituraParseada } from 'App/Utils/SensorPayloadParser'
 
 class AutomacaoEngineService {
   private cacheEstado: Map<number, string> = new Map()
