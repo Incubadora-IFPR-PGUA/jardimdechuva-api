@@ -30,7 +30,7 @@ export default class LeituraSensorService {
       sensor.estadoAtual = payload.estadoAtual
     }
 
-    sensor.atualizadoEm = DateTime.now()
+    sensor.ultimaLeituraEm = DateTime.now()
     await sensor.save()
 
     await leitura.load('sensor', (q) => q.preload('tipoSensor'))

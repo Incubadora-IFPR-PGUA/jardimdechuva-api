@@ -19,7 +19,7 @@ export default class SensorController {
       'mqttTopicoLeitura', 'imagemUrl', 'localizacao'
     ])
     const configData = request.only(['valorMin', 'valorMax'])
-    
+
     const sensor = await Sensor.create(data)
 
     if (configData.valorMin !== undefined || configData.valorMax !== undefined) {
@@ -51,7 +51,7 @@ export default class SensorController {
     const sensor = await Sensor.findOrFail(params.id)
     sensor.merge(request.only([
       'nome', 'estadoAtual', 'valorAtual',
-      'atualizadoEm', 'imagemUrl', 'localizacao', 'idTipoSensor'
+      'ultimaLeituraEm', 'imagemUrl', 'localizacao', 'idTipoSensor'
     ]))
     await sensor.save()
 
