@@ -31,8 +31,8 @@ export default class Sensor extends BaseModel {
   @column()
   public valorAtual: number | null
 
-  @column.dateTime()
-  public atualizadoEm: DateTime | null
+  @column.dateTime({columnName: 'ultima_leitura_em' })
+  public ultimaLeituraEm: DateTime | null
 
   @column()
   public imagemUrl: string | null
