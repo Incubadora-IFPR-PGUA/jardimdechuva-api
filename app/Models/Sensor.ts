@@ -31,6 +31,10 @@ export default class Sensor extends BaseModel {
   @column()
   public valorAtual: number | null
 
+  @column()
+  public statusConexao: 'online' | 'atrasado' | 'offline'
+
+
   @column.dateTime({columnName: 'ultima_leitura_em' })
   public ultimaLeituraEm: DateTime | null
 
