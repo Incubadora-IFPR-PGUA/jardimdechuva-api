@@ -4,6 +4,14 @@ import Sensor from 'App/Models/Sensor'
 import LeituraSensorService from 'App/Services/LeituraSensorService'
 import { parseSensorPayload } from 'App/Utils/SensorPayloadParser'
 
+// =======================================================================
+// 🧠 VARIÁVEIS DE CONTROLE GLOBAL (Evitam conflitos de concorrência)
+// =======================================================================
+let ultimaQualidadeAr: string | null = null
+let ultimoEstadoLampada: string | null = null // '1' ou '0'
+let ultimoEstadoSolenoide: string | null = null // '1' ou '0' para a válvula
+let ligadoPelaAutomacao: boolean = false
+
 class MqttService {
   private client: mqtt.MqttClient
 
@@ -14,7 +22,7 @@ class MqttService {
 
   public publish(topico: string, payload: Record<string, unknown>, options?: mqtt.IClientPublishOptions) {
     if (!this.client || !this.client.connected) {
-      console.warn(`⚠️ [MQTT] Tentativa de publicar em "${topico}" sem conexão ativa`)
+      console.warn(`⚠️ [MQTT] Tentativa de publicar em "${topico}" sem conexão activa`)
       return
     }
 
@@ -48,7 +56,17 @@ class MqttService {
     this.client.on('connect', () => {
       console.log('✅ [MQTT] Conectado ao broker Mosquitto')
 
-      this.getTopicos().forEach((topico) => {
+      // Adicionados tópicos da solenoide (comando e status) no escopo de inscrição
+      const topicosInscricao = Array.from(
+        new Set([
+          ...this.getTopicos(), 
+          'atuador/lampada', 
+          'atuador/solenoide', 
+          'atuador/solenoide/status'
+        ])
+      )
+
+      topicosInscricao.forEach((topico) => {
         this.client.subscribe(topico, (err) => {
           if (err) console.error(`❌ [MQTT] Falha ao subscrever ${topico}:`, err)
           else console.log(`📡 [MQTT] Escutando tópico: ${topico}`)
@@ -61,6 +79,30 @@ class MqttService {
         const payloadString = message.toString()
         console.log(`📥 [MQTT] [${topic}]`, payloadString)
 
+        // 🟢 1. SINCRONIZAÇÃO DO BOTÃO MANUAL DA INTERFACE WEB (LÂMPADA)
+        if (topic === 'atuador/lampada') {
+          if (payloadString === ultimoEstadoLampada) {
+            return
+          }
+          console.log(`🔌 [MQTT Sync] Estado da lâmpada alterado via site/externo. Novo estado: ${payloadString}`)
+          ultimoEstadoLampada = payloadString
+          
+          // Quando o usuário interage, tiramos o controle da automação sobre a lâmpada
+          ligadoPelaAutomacao = false 
+          return
+        }
+
+        // 🚰 2. SINCRONIZAÇÃO DA VÁLVULA SOLENOIDE (BOTÃO MANUAL OU ESP32 STATUS)
+        if (topic === 'atuador/solenoide' || topic === 'atuador/solenoide/status') {
+          if (payloadString === ultimoEstadoSolenoide) {
+            return
+          }
+          console.log(`🚰 [MQTT Sync] Estado da Válvula Solenoide alterado. Novo estado: ${payloadString}`)
+          ultimoEstadoSolenoide = payloadString
+          return
+        }
+
+        // 📡 3. PROCESSAMENTO DAS LEITURAS DE SENSORS
         const payload = JSON.parse(payloadString) as Record<string, unknown>
         await this.handleSensorData(topic, payload)
       } catch (err) {
@@ -79,24 +121,39 @@ class MqttService {
       return
     }
 
-    this.client.publish(topico, payload, { retain: true }, (err) => {
+    this.client.publish(topico, payload, (err) => {
       if (err) console.error(`❌ [MQTT] Falha ao publicar em ${topico}:`, err)
       else console.log(`📤 [MQTT] Publicado [${topico}]:`, payload)
     })
   }
-
+  
   private async handleSensorData(topic: string, payload: Record<string, unknown>) {
     // 1. Fazer o PARSE e a AUTOMAÇÃO primeiro (Isolado de erros de banco)
     try {
       const parsed = parseSensorPayload(payload, 'mqtt', topic)
 
       if (parsed.tipo === 'ar') {
-        const comandoAtuador = parsed.estadoAtual === 'bom' ? '0' : '1'
+        const estadoAtual = (parsed.estadoAtual || 'desconhecido').toLowerCase()
+        ultimaQualidadeAr = estadoAtual
+
+        // 🚨 NOVA LÓGICA DE AUTOMAÇÃO INTELIGENTE:
         
-        // Publica o comando para o ESP32 da lâmpada
-        this.publicar('atuador/lampada', comandoAtuador)
-        
-        console.log(`💡 [Automação] Estado: "${parsed.estadoAtual}". Comando enviado: ${comandoAtuador}`)
+        // A. Se o botão está desligado ('0') e o ar NÃO é bom (e não é desconhecido) -> LIGA
+        if (ultimoEstadoLampada === '0' && estadoAtual !== 'bom' && estadoAtual !== 'desconhecido') {
+          console.log(`💡 [Automação] Botão está desligado e o ar está "${estadoAtual.toUpperCase()}". Acendendo a lâmpada...`)
+          ultimoEstadoLampada = '1'
+          ligadoPelaAutomacao = true // Avisa que a automação tomou controle
+          this.publicar('atuador/lampada', '1')
+        }
+        // B. Se o ar voltou a ficar 'bom' e quem ligou a lâmpada foi a automação -> DESLIGA
+        else if (estadoAtual === 'bom' && ultimoEstadoLampada === '1' && ligadoPelaAutomacao) {
+          console.log(`🔌 [Automação] O ar ficou BOM. Desligando a lâmpada que a automação havia acendido anteriormente.`)
+          ultimoEstadoLampada = '0'
+          ligadoPelaAutomacao = false // Devolve o estado neutro
+          this.publicar('atuador/lampada', '0')
+        } else {
+          console.log(`♻️ [Automação] Ar: "${estadoAtual}" | Lâmpada: "${ultimoEstadoLampada}" | Controlado por Automação: ${ligadoPelaAutomacao}. Nenhuma ação necessária.`)
+        }
       }
     } catch (autoErr) {
       console.error('❌ [MQTT] Erro estrito na automação da lâmpada:', autoErr)
