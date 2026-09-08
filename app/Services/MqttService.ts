@@ -11,6 +11,7 @@ let ultimaQualidadeAr: string | null = null
 let ultimoEstadoLampada: string | null = null // '1' ou '0'
 let ultimoEstadoSolenoide: string | null = null // '1' ou '0' para a válvula
 let ligadoPelaAutomacao: boolean = false
+let solenoideLigadaPorAutomacao: boolean = false
 
 class MqttService {
   private client: mqtt.MqttClient
@@ -62,7 +63,8 @@ class MqttService {
           ...this.getTopicos(), 
           'atuador/lampada', 
           'atuador/solenoide', 
-          'atuador/solenoide/status'
+          'atuador/solenoide/status',
+          'sensor/solo'
         ])
       )
 
@@ -155,6 +157,29 @@ class MqttService {
           console.log(`♻️ [Automação] Ar: "${estadoAtual}" | Lâmpada: "${ultimoEstadoLampada}" | Controlado por Automação: ${ligadoPelaAutomacao}. Nenhuma ação necessária.`)
         }
       }
+        if ((parsed.tipo as string) === 'solo' || topic === 'sensor/solo') {
+          const umidade = Number(payload.umidade ?? parsed.valor)
+          const estado = String(payload.estado || parsed.estadoAtual || '').toLowerCase()
+
+          console.log(`🌱 [Solo] Leitura: ${umidade}% | Estado: ${estado}`)
+
+          // Se o solo estiver seco (< 20% ou estado "seco") e a válvula não estiver aberta:
+          if ((estado === 'seco' || umidade < 20) && ultimoEstadoSolenoide !== '1') {
+            console.log('🚰 [Automação Solo] Solo SECO detectado. Abrindo válvula solenoide...')
+            ultimoEstadoSolenoide = '1'
+            solenoideLigadaPorAutomacao = true
+            this.publicar('atuador/solenoide', '1')
+          }
+          // Se o solo hidratou (>= 25%) e foi a automação que ligou:
+          else if ((estado === 'umido' || estado === 'encharcado' || umidade >= 25) && 
+                  ultimoEstadoSolenoide === '1' && 
+                  solenoideLigadaPorAutomacao) {
+            console.log('💧 [Automação Solo] Solo hidratado. Fechando válvula solenoide...')
+            ultimoEstadoSolenoide = '0'
+            solenoideLigadaPorAutomacao = false
+            this.publicar('atuador/solenoide', '0')
+          }
+        }
     } catch (autoErr) {
       console.error('❌ [MQTT] Erro estrito na automação da lâmpada:', autoErr)
     }
