@@ -1,5 +1,5 @@
 import { DateTime } from 'luxon'
-import { BaseModel, column, belongsTo, hasMany, hasOne, BelongsTo, HasMany, HasOne } from '@ioc:Adonis/Lucid/Orm'
+import { BaseModel, column, computed, belongsTo, hasMany, hasOne, BelongsTo, HasMany, HasOne } from '@ioc:Adonis/Lucid/Orm'
 import Dispositivo from './Dispositivo'
 import TipoSensor from './TipoSensor'
 import ConfiguracaoSensor from './ConfiguracaoSensor'
@@ -32,6 +32,12 @@ export default class Sensor extends BaseModel {
   public valorAtual: number | null
 
   @column()
+  public modoLeitura: 'rotineiro' | 'incessante'
+
+  @column()
+  public timeoutConexaoSegundos: number | null
+
+  @column()
   public statusConexao: 'online' | 'atrasado' | 'offline'
 
 
@@ -52,6 +58,15 @@ export default class Sensor extends BaseModel {
 
   @column.dateTime()
   public deletedAt: DateTime | null
+
+  @computed({serializeAs: 'status_conexao_atual' })
+  public get statusConexaoAtual(): 'online' | 'atrasado' | 'offline' {
+    if (!this.ultimaLeituraEm) return 'offline'
+    const timeout =
+	this.timeoutConexaoSegundos ?? (this.modoLeitura == 'incessante' ? 120 : 3600)
+    const diff = DateTime.now().diff(this.ultimaLeituraEm, 'seconds').seconds
+    return diff <= timeout ? 'online' : diff <= timeout * 2 ? 'atrasado' : 'offline'
+  }
 
   @belongsTo(() => Dispositivo, { foreignKey: 'idDispositivo' })
   public dispositivo: BelongsTo<typeof Dispositivo>

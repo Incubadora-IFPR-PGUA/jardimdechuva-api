@@ -1,6 +1,7 @@
 import { DateTime } from 'luxon'
 import type { HttpContextContract } from '@ioc:Adonis/Core/HttpContext'
 import Sensor from 'App/Models/Sensor'
+import TipoSensor from 'App/Models/TipoSensor'
 import ConfiguracaoSensor from 'App/Models/ConfiguracaoSensor'
 
 export default class SensorController {
@@ -17,8 +18,19 @@ export default class SensorController {
     const data = request.only([
       'idDispositivo', 'idTipoSensor', 'nome',
       'mqttTopicoLeitura', 'imagemUrl', 'localizacao'
+      'modoLeitura', 'timeoutConexaoSegundos'
     ])
     const configData = request.only(['valorMin', 'valorMax'])
+
+    const tipo = await TipoSensor.find(data.idTipoSensor)
+    if (tipo) {
+      if (data.modoLeitura === undefined){
+         data.modoLeitura = tipo.modoLeituraPadrao
+      }
+      if (data.timeoutConexaoSegundos === undefined) {
+         data.timeoutConexaoSegundos = tipo.timeoutConexaoPadraoSegundos
+      }
+    }
 
     const sensor = await Sensor.create(data)
 
@@ -51,7 +63,8 @@ export default class SensorController {
     const sensor = await Sensor.findOrFail(params.id)
     sensor.merge(request.only([
       'nome', 'estadoAtual', 'valorAtual',
-      'ultimaLeituraEm', 'imagemUrl', 'localizacao', 'idTipoSensor'
+      'ultimaLeituraEm', 'imagemUrl', 'localizacao', 'idTipoSensor',
+      'modoLeitura', 'timeoutConexaoSegundos'
     ]))
     await sensor.save()
 

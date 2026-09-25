@@ -15,6 +15,12 @@ export default class TipoSensor extends BaseModel {
 
   @column()
   public descricao: string | null
+ 
+  @column()
+  public modoLeituraPadrao: 'rotineiro' | 'incessante'
+
+  @column()
+  public timeoutConexaoPadraoSegundos: number | null
 
   @hasMany(() => Sensor, { foreignKey: 'idTipoSensor' })
   public sensores: HasMany<typeof Sensor>
