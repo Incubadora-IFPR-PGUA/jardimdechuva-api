@@ -18,5 +18,5 @@ export default Env.rules({
   MQTT_USER: Env.schema.string.optional(),
   MQTT_PASSWORD: Env.schema.string.optional(),
   MQTT_TOPICS: Env.schema.string.optional(),
-  WEBHOOK_SECRET: Env.schema.string.optional(),
+  WEBHOOK_SECRET: Env.schema.string(),
 })
