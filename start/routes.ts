@@ -23,13 +23,13 @@ Route.post('/webhook/deploy/:token', async ({ params, response }) => {
   }
 
   const { exec } = require('child_process')
-  const cwd = '/home/incubadoraifpr-apijardimdechuva/htdocs/apijardimdechuva.incubadoraifpr.com.br'
+  const repo = '/home/incubadoraifpr-apijardimdechuva/htdocs/apijardimdechuva.incubadoraifpr.com.br/jardimdechuva-api'
 
   exec(
-    'git pull && npm install && node ace build --production --ignore-ts-errors && cp .env build/.env && pm2 restart API-JARDIM-CHUVA',
-    { cwd, shell: '/bin/bash' },
-    (err: any, stdout: string, _stderr: string) => {
-      if (err) console.error('[WEBHOOK] Deploy error:', err)
+    `cd ${repo} && git pull origin main && npm install --include=dev && node ace build --production --ignore-ts-errors && cp .env build/.env && pm2 restart API-JARDIM-CHUVA`,
+    { shell: '/bin/bash' },
+    (err: any, stdout: string, stderr: string) => {
+      if (err) console.error('[WEBHOOK] Deploy error:', err, stderr)
       else console.log('[WEBHOOK] Deploy ok:', stdout)
     }
   )
