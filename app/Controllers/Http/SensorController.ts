@@ -17,7 +17,7 @@ export default class SensorController {
   public async store({ request, response }: HttpContextContract) {
     const data = request.only([
       'idDispositivo', 'idTipoSensor', 'nome',
-      'mqttTopicoLeitura', 'imagemUrl', 'localizacao'
+      'mqttTopicoLeitura', 'imagemUrl', 'localizacao',
       'modoLeitura', 'timeoutConexaoSegundos'
     ])
     const configData = request.only(['valorMin', 'valorMax'])
