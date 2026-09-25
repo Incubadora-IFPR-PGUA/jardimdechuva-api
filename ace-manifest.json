@@ -1,5 +1,17 @@
 {
   "commands": {
+    "leituras:agregar": {
+      "settings": {
+        "loadApp": true,
+        "stayAlive": false
+      },
+      "commandPath": "./commands/AgregarLeituras",
+      "commandName": "leituras:agregar",
+      "description": "Agrega leituras antigas de sensores incessantes em médias por hora e por dia",
+      "args": [],
+      "aliases": [],
+      "flags": []
+    },
     "drop:tables": {
       "settings": {
         "loadApp": true
@@ -7,6 +19,18 @@
       "commandPath": "./commands/DropTables",
       "commandName": "drop:tables",
       "description": "Drops the new tables and clears the migration schema for them.",
+      "args": [],
+      "aliases": [],
+      "flags": []
+    },
+    "sensors:check-timeout": {
+      "settings": {
+        "loadApp": true,
+        "stayAlive": false
+      },
+      "commandPath": "./commands/SensorsCheckTimeout",
+      "commandName": "sensors:check-timeout",
+      "description": "Verifica timeout de conexão dos sensores e alerta em transições de status",
       "args": [],
       "aliases": [],
       "flags": []
